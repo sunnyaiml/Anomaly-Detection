@@ -4,7 +4,7 @@
 
 ## Project Summary
 
-Anomaly-Detection is a compact, reproducible repository that demonstrates end-to-end workflows for detecting unusual events in time series and tabular datasets. The project includes data processing, modeling (unsupervised and semi-supervised), evaluation, and visualizations to support actionable insights for operations and monitoring use cases.
+Anomaly-Detection is a compact, reproducible repository that demonstrates end-to-end workflows for detecting unusual events in sales time series data. The primary analysis notebook (`FireAI_Test_Sunny_Vishwakarma_15_11_2025.ipynb`) performs EDA, seasonal decomposition and multiple statistical anomaly-detection methods, and produces visualizations to support investigation and operational decision-making.
 
 ## Problem Statement / Business Context
 
@@ -14,17 +14,21 @@ Anomaly-Detection is a compact, reproducible repository that demonstrates end-to
 ## Tech Stack / Tools Used
 
 - **Language:** Python 3.9+
-- **Core libraries:** pandas, numpy, scikit-learn, matplotlib, seaborn
-- **Anomaly libraries (examples):** pyod, isolation-forest (sklearn), prophet for seasonal decomposition
+- **Core libraries (used in notebook):** `pandas`, `numpy`, `matplotlib`, `seaborn`, `statsmodels`
 - **Dev / infra:** Jupyter Notebook, Git, GitHub
 
-## Features
+- **Optional / advanced models:** `scikit-learn` (e.g., `IsolationForest`) and `pyod` are not required by the existing notebook but are common additions if you want to run ensemble or ML-based anomaly detectors.
 
-- Preprocessing pipelines for time series and tabular data
-- Unsupervised models (Isolation Forest, One-Class SVM, LOF)
-- Semi-supervised and statistical baselines (Z-score, rolling statistics)
-- Visual dashboards for anomaly timelines and distributions
-- Evaluation metrics and comparison reports
+## Features (implemented in the notebook)
+
+- Data loading and integrity checks (date parsing, missing values)
+- Exploratory Data Analysis (histograms, boxplots, ACF/PACF)
+- Seasonal decomposition (statsmodels)
+- Statistical anomaly detection methods: Z-score, IQR, Moving Average with rolling std
+- Consolidation of multiple methods into confidence scores and validation
+- Visual outputs: anomaly timeline, store-product hotspot heatmap, method comparison plots
+
+Note: ML-based detectors such as `IsolationForest` are optional and not included in the notebook by default.
 
 ## Demo (Screenshots / GIFs / Video)
 
@@ -36,18 +40,23 @@ You can also add a short GIF or link to a recorded walkthrough.
 
 ## Repository Structure & Setup
 
-Suggested structure:
+Current project files:
 
 ```
 Anomaly-Detection/
-├─ FireAI_Test_Sunny_Vishwakarma_15_11_2025.ipynb
+├─ FireAI_Test_Sunny_Vishwakarma_15_11_2025.ipynb  # main analysis notebook
 ├─ README.md
-├─ data/                  # (optional) raw and processed data
-├─ notebooks/             # exploratory notebooks
-├─ src/                   # scripts and modules
-├─ docs/                  # screenshots, diagrams
-└─ requirements.txt       # python dependencies
 ```
+
+Recommended folders to add as the project grows:
+
+```
+data/    # local CSV or other data files (optional)
+docs/    # screenshots, architecture diagrams
+src/     # reusable scripts or modules
+```
+
+If you add a local dataset, place it under `data/` and update the notebook code accordingly.
 
 ## Installation Instructions
 
@@ -58,34 +67,54 @@ git clone https://github.com/sunnyaiml/Anomaly-Detection.git
 cd Anomaly-Detection
 ```
 
-2. (Optional) Create virtual environment and install dependencies:
+2. (Optional) Create and activate a virtual environment:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
 ```
 
-3. Start the notebook:
+3. Install the required Python packages (copy-pasteable):
+
+```bash
+pip install pandas numpy matplotlib seaborn statsmodels jupyter
+```
+
+4. (Optional) If you plan to use ML-based detectors (IsolationForest / pyod), install:
+
+```bash
+pip install scikit-learn pyod
+```
+
+5. Start Jupyter Lab/Notebook and run the analysis notebook:
 
 ```bash
 jupyter lab
-```
-
-If `requirements.txt` is not present, install core packages manually:
-
-```bash
-pip install pandas numpy scikit-learn matplotlib seaborn pyod jupyter
+# or
+jupyter notebook FireAI_Test_Sunny_Vishwakarma_15_11_2025.ipynb
 ```
 
 ## Data Sources & Methodology
 
-- Example public datasets you can try: NAB (Numenta Anomaly Benchmark), Yahoo Webscope S5, KDD Cup variations.
-- Methodology:
-	- Data ingestion & cleaning (resample, impute, smoothing)
-	- Feature engineering (lags, rolling stats, seasonal decomposition)
-	- Train unsupervised detectors and tune contamination/thresholds
-	- Evaluate using precision/recall, F1, ROC (where labels exist) and time-to-detect metrics
+- Data source (used in notebook): dataset is loaded from a Google Drive URL inside the notebook. The notebook's runtime load command is:
+
+```python
+df = pd.read_csv('https://drive.google.com/uc?export=download&id=1jpCNevXAiSKj6DURoe1Keno5GNrC9Ybw')
+```
+
+- Dataset summary (as reported in the notebook):
+	- Rows: 230,090
+	- Columns: `Date`, `store`, `product`, `number_sold`
+	- Date range: 2010-01-01 → 2018-12-31
+
+- Methodology (implemented):
+	- Data ingestion & cleaning (date parsing, index, sorting)
+	- Exploratory Data Analysis (distribution, boxplots, store/product breakdown)
+	- Seasonal decomposition (`statsmodels.tsa.seasonal`) and ACF/PACF analysis
+	- Statistical anomaly detection: Z-score, IQR, Moving Average with rolling std
+	- Consolidation and validation of anomalies into confidence tiers
+
+If you prefer a local CSV file instead of the Drive link, add it under `data/` and update the notebook `pd.read_csv(...)` path accordingly.
 
 ## Key Visualizations
 
@@ -106,18 +135,34 @@ pip install pandas numpy scikit-learn matplotlib seaborn pyod jupyter
 
 ## Key Code Snippets
 
-Minimal example: run Isolation Forest on a single feature
+Load dataset (as in the notebook):
 
 ```python
 import pandas as pd
-from sklearn.ensemble import IsolationForest
+df = pd.read_csv('https://drive.google.com/uc?export=download&id=1jpCNevXAiSKj6DURoe1Keno5GNrC9Ybw')
+df['Date'] = pd.to_datetime(df['Date'])
+```
 
-df = pd.read_csv('data/sample.csv', parse_dates=['timestamp'])
-X = df[['value']].fillna(method='ffill')
+Minimal Z-score anomaly detection pattern (conceptual):
+
+```python
+import numpy as np
+temp = df.set_index('Date')['number_sold']
+mean = temp.mean()
+std = temp.std()
+z_score = (temp - mean) / std
+anomalies = z_score.abs() > 3
+```
+
+Optional: run an IsolationForest (install `scikit-learn` to enable):
+
+```python
+from sklearn.ensemble import IsolationForest
+X = df[['number_sold']].fillna(method='ffill')
 model = IsolationForest(contamination=0.01, random_state=42)
 model.fit(X)
 df['anomaly_score'] = model.decision_function(X)
-df['anomaly'] = model.predict(X) == -1
+df['anomaly_iforest'] = model.predict(X) == -1
 ```
 
 ## Architecture Diagram / Workflow
@@ -151,6 +196,15 @@ Place an architecture image at `docs/architecture.png` or add a diagram here. Ty
 
 - Repository owner: `sunnyaiml` — https://github.com/sunnyaiml/
 - Connect: https://www.linkedin.com/in/sv-tech/
+
+## Notes on the Q4-2025 referral
+
+You provided a detailed Q4-2025 (Sales Anomaly Detection) narrative earlier. That description refers to a different dataset period (Q4 2025) and an IsolationForest-based workflow. The current notebook in this repository uses a historical dataset (2010–2018) and implements statistical methods (Z-score, IQR, Moving Average). If you want the Q4-2025 analysis and IsolationForest code, I can either:
+
+- create a new notebook that follows the Q4-2025 narrative (requires the Q4-2025 CSV), or
+- modify the existing notebook to ingest a local `data/sales_data_q4_2025.csv` and add IsolationForest code (you must provide the dataset or allow synthetic generation).
+
+No `requirements.txt` file is created per your request; instead, copy-paste the `pip install ...` command shown in Installation Instructions to install the required packages.
 
 ## Contact & License
 
